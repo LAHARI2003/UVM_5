@@ -1,0 +1,105 @@
+# Vplan YAML Template - Define your test cases here
+# =====================================================
+# Copy and customize this file for your verification plan
+
+test_cases:
+  # =========================================
+  # Test Case 1: Basic operation
+  # =========================================
+  - TC_ID: TC_BASIC_001
+    description: "Basic functionality test with default configuration"
+    
+    # List of UVCs active in this test
+    # Must match interface names from block.yaml
+    Active_UVCs:
+      - m_input_data_env
+      - m_output_data_env
+      - m_weights_mem_env
+      - m_config_env
+    
+    # Stimulus configuration
+    Stimulus_Generation:
+      # Register/configuration settings
+      regbank_program:
+        mode: "00"           # Operation mode (customize for your IP)
+        enable: 1            # Enable signal
+        # Add your IP-specific parameters here
+        # param1: value1
+        # param2: value2
+      
+      # Data generation patterns
+      input_provisioning:
+        input_data:
+          pattern_bin: random  # random, zeros, ones, sequential, file
+          file_path: null      # Path if pattern is 'file'
+        weights:
+          pattern_bin: random
+    
+    # Observability - signals to monitor
+    Observability:
+      signals:
+        - output_valid
+        - done_flag
+    
+    # Coverage targets
+    Coverage_Intent:
+      functional:
+        - basic_operation
+        - mode_0_coverage
+
+  # =========================================
+  # Test Case 2: Different mode
+  # =========================================
+  - TC_ID: TC_MODE01_002
+    description: "Test with mode 01"
+    
+    Active_UVCs:
+      - m_input_data_env
+      - m_output_data_env
+      - m_weights_mem_env
+      - m_bias_mem_env      # Include additional UVC
+      - m_config_env
+    
+    Stimulus_Generation:
+      regbank_program:
+        mode: "01"
+        enable: 1
+      
+      input_provisioning:
+        input_data:
+          pattern_bin: sequential
+        weights:
+          pattern_bin: file
+          file_path: "./test_data/weights_01.txt"
+        bias:
+          pattern_bin: zeros
+    
+    Coverage_Intent:
+      functional:
+        - mode_1_coverage
+        - bias_enabled
+
+  # =========================================
+  # Test Case 3: Edge case test
+  # =========================================
+  - TC_ID: TC_EDGE_003
+    description: "Edge case with maximum data size"
+    
+    Active_UVCs:
+      - m_input_data_env
+      - m_output_data_env
+      - m_config_env
+    
+    Stimulus_Generation:
+      regbank_program:
+        mode: "11"
+        data_size: 4096      # Maximum size
+    
+    Coverage_Intent:
+      functional:
+        - max_size_test
+        - boundary_conditions
+
+# =====================================================
+# Add more test cases following the same structure
+# =====================================================

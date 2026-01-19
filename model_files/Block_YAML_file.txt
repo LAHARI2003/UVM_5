@@ -1,0 +1,80 @@
+Block : 
+
+Name : dimc_tile_wrapper_m 
+
+Clocks : 
+  name : clk 
+
+  Frequency :  100Mhz 
+
+Resets : 
+
+  Name : resetn 
+
+ Active_low : true 
+
+ 
+
+Model: 
+
+Language : Cmodel 
+
+Entry : main 
+lib_path : ./psout 
+
+ 
+
+Interfaces : 
+
+Name : m_feature_buffer_env 
+
+Kind : istream_env#(64) 
+ 
+params : { DATA_WIDTH : 64 } 
+
+Map_to_model : arg : feature 
+ 
+Name : m_psin_env 
+
+Kind : istream_env#(32) 
+
+params : { DATA_WIDTH : 32 } 
+
+Map_to_model : arg : psin 
+
+Name : m_kernel_mem_env 
+
+Kind : dpmem_env#(64,9) 
+
+params : { DATA_WIDTH : 64, ADDR_WIDTH :9} 
+
+Map_to_model : arg : kernels 
+
+ 
+Name : m_addin_env 
+Kind : spmem_env#(64,4) 
+params : { DATA_WIDTH : 64, ADDR_WIDTH :4} 
+
+Map_to_model : arg : addin 
+
+ 
+Name : m_computation_env 
+
+Kind : regbank_env 
+
+Map_to_model : arg : mode, sign_8b 
+
+ 
+
+Name : m_output_buffer_env 
+
+Kind : ostream_env#(64) 
+
+params : { DATA_WIDTH : 64 } 
+
+Map_to_model : arg : psout 
+ 
+
+ 
+
+ 

@@ -1,0 +1,72 @@
+# Block YAML Template - Describe your IP/DUT here
+# =====================================================
+# Copy and customize this file for your IP block
+
+DUT:
+  # Module name - this is used to derive all other names
+  module_name: my_ip_top
+  
+  # Clock signal
+  clock: clk
+  # Or detailed format:
+  # clock:
+  #   name: clk
+  #   frequency: "500MHz"
+  
+  # Reset signal  
+  reset: rst_n
+  # Or detailed format:
+  # reset:
+  #   name: rst_n
+  #   active_low: true
+  
+  # Reference model (optional but recommended)
+  reference_model:
+    type: C_model
+    path: ./model/my_model.cpp
+    executable: ./my_model_exe
+    # Command format with placeholders
+    command_format: "./my_model_exe {input_file} {output_file} {mode} {config}"
+    # Or list of argument names
+    arguments:
+      - input_file
+      - output_file
+      - mode
+      - config
+  
+  # Interface definitions
+  # Each interface should map to a UVC type in uvc_mapping.yaml
+  interfaces:
+    # Input stream interface
+    m_input_data_env:
+      type: istream_env
+      parameters: [64]  # DATA_WIDTH = 64
+      virtual_if: istream_if#(64)
+    
+    # Output stream interface
+    m_output_data_env:
+      type: ostream_env
+      parameters: [64]
+      virtual_if: ostream_if#(64)
+    
+    # Memory interface (dual-port)
+    m_weights_mem_env:
+      type: dpmem_env
+      parameters: [64, 10]  # DATA_WIDTH = 64, ADDR_WIDTH = 10
+      virtual_if: dpmem_if#(64,10)
+    
+    # Memory interface (single-port)
+    m_bias_mem_env:
+      type: spmem_env
+      parameters: [32, 8]
+      virtual_if: spmem_if#(32,8)
+    
+    # Register/Configuration interface
+    m_config_env:
+      type: regbank_env
+      virtual_if: regbank_if
+    
+    # Add more interfaces as needed for your IP
+    # m_additional_env:
+    #   type: <uvc_type>
+    #   parameters: [<param1>, <param2>]

@@ -1,0 +1,15 @@
+# UVM Generator Dependencies
+# LLM API clients
+anthropic>=0.18.0
+openai>=1.12.0
+
+# YAML parsing
+pyyaml>=6.0.1
+
+# CLI and utilities
+click>=8.1.7
+rich>=13.7.0
+python-dotenv>=1.0.0
+
+# Optional: For syntax validation
+# pygments>=2.17.0

@@ -1,0 +1,46 @@
+# UVM Generator V2 - Configuration
+# =============================================================================
+# This file contains GENERIC settings - not hardcoded to any specific IP
+# =============================================================================
+
+# LLM Settings
+llm:
+  provider: "anthropic"  # Options: "anthropic", "openai"
+  model: "claude-sonnet-4-20250514"  # Or "gpt-4-turbo", "gpt-4o", etc.
+  max_tokens: 8192
+  temperature: 0.1  # Low temperature for consistent code generation
+  retry_attempts: 5
+  retry_base_delay: 1.0  # seconds
+
+# Output Settings
+output:
+  base_dir: "./output"
+  ip_infra_dir: "ip_infra"
+  tests_dir: "tests"
+  add_headers: true  # Add auto-generated headers to files
+  skip_existing: false  # Skip files that already exist
+
+# Naming conventions (can be overridden per-IP)
+# If not specified, names are auto-derived from block_name
+naming:
+  # Optional prefix for all generated classes (e.g., "p18" for project 18)
+  # prefix: ""
+  
+  # Suffixes for file naming (defaults shown)
+  env_suffix: "_env"
+  vseqr_suffix: "_virtual_sequencer"
+  interface_suffix: "_if"
+  package_suffix: "_pkg"
+  scoreboard_suffix: "_scoreboard"
+  test_suffix: "_test"
+  vseq_suffix: "_vseq"
+
+# Logging
+logging:
+  level: "INFO"  # DEBUG, INFO, WARNING, ERROR
+  file: null  # Optional log file path
+
+# Validation
+validation:
+  check_syntax: true  # Basic SystemVerilog syntax checks
+  warn_on_issues: true  # Warn but continue on validation issues

@@ -1,0 +1,104 @@
+# UVC to Sequence Mapping Configuration
+# ═══════════════════════════════════════════════════════════════════
+# Maps Block YAML interface names to UVC sequences and parameters
+
+uvc_mapping:
+  # Feature Buffer - 64-bit input stream
+  m_feature_buffer_env:
+    env_type: "istream_env#(64)"
+    vif_type: "istream_if#(64)"
+    sequencer_type: "istream_sequencer#(64)"
+    sequences:
+      write: "istream_directed_write_sequence#(64)"
+      burst_write: "istream_directed_random_burst_write_sequence#(64)"
+    sequencer_name: "seqr_feature_buffer"
+    config_db_name: "feature_buffer_vif"
+    default_file: "./feature_hex_rtl.txt"
+    default_size: 16
+
+  # Kernel Memory - 64-bit dual-port memory
+  m_kernel_mem_env:
+    env_type: "dpmem_env#(64,9)"
+    vif_type: "dpmem_if#(64,9)"
+    sequencer_type: "dpmem_sequencer#(64,9)"
+    sequences:
+      write: "dpmem_directed_write_sequence#(64,9)"
+      read: "dpmem_directed_read_sequence#(64,9)"
+    sequencer_name: "seqr_kernel_mem"
+    config_db_name: "kernel_mem_vif"
+    default_file: "./kernel_hex_rtl.txt"
+    default_size: 512
+
+  # PSIN - 32-bit input stream
+  m_psin_env:
+    env_type: "istream_env#(32)"
+    vif_type: "istream_if#(32)"
+    sequencer_type: "istream_sequencer#(32)"
+    sequences:
+      write: "istream_directed_write_sequence#(32)"
+    sequencer_name: "seqr_psin"
+    config_db_name: "psin_vif"
+    default_file: "./psin_hex_rtl.txt"
+    default_size: 32
+
+  # ADDIN - 64-bit single-port memory
+  m_addin_env:
+    env_type: "spmem_env#(64,4)"
+    vif_type: "spmem_if#(64,4)"
+    sequencer_type: "spmem_sequencer#(64,4)"
+    sequences:
+      write: "spmem_directed_write_sequence#(64,4)"
+      read: "spmem_directed_read_sequence#(64,4)"
+    sequencer_name: "seqr_addin"
+    config_db_name: "addin_vif"
+    default_file: "./addin_hex_rtl.txt"
+    default_size: 16
+
+  # Computation - Register bank for control
+  m_computation_env:
+    env_type: "computation_env"
+    vif_type: "computation_if"
+    sequencer_type: "computation_sequencer"
+    sequences:
+      configure: "computation_configure_write_seq"
+    sequencer_name: "seqr_compu"
+    config_db_name: "computation_vif"
+
+  # Output Buffer - 64-bit output stream
+  m_output_buffer_env:
+    env_type: "ostream_env#(64)"
+    vif_type: "ostream_if#(64)"
+    sequencer_type: "ostream_sequencer#(64)"
+    sequences:
+      read: "ostream_random_burst_read_sequence#(64)"
+    sequencer_name: "seqr_output_buffer"
+    config_db_name: "ostream_vif"
+    default_size: 32
+
+# Parameter transformations
+transformations:
+  mode:
+    "00": { value: 0, bit_width: 1, description: "1-bit mode" }
+    "01": { value: 1, bit_width: 2, description: "2-bit mode" }
+    "10": { value: 2, bit_width: 4, description: "4-bit mode" }
+    "11": { value: 3, bit_width: 8, description: "8-bit mode" }
+
+  ps_phase:
+    "PS_FIRST": { PS_FIRST: 1, PS_MODE: 0, PS_LAST: 0 }
+    "PS_MODE":  { PS_FIRST: 0, PS_MODE: 1, PS_LAST: 0 }
+    "PS_LAST":  { PS_FIRST: 0, PS_MODE: 0, PS_LAST: 1 }
+
+  sign_8b:
+    "dont_care": 0
+    "00": 0
+    "01": 1
+    "10": 2
+    "11": 3
+
+# UVC package imports
+packages:
+  - "istream_pkg"
+  - "dpmem_pkg"
+  - "spmem_pkg"
+  - "computation_pkg"
+  - "ostream_pkg"

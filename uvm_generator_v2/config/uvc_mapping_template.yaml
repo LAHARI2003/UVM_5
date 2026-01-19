@@ -1,0 +1,102 @@
+# UVM Generator V2 - UVC Mapping Template
+# =============================================================================
+# Copy this file and customize for your IP block
+# Maps Block YAML interface names to UVC types, sequences, and sequencers
+# =============================================================================
+
+# UVC Mapping: Maps interface names from Block YAML to UVC details
+uvc_mapping:
+  
+  # Example: Input stream interface
+  # Replace 'm_input_env' with your actual interface name from Block YAML
+  m_input_env:
+    env_type: "istream_env#(64)"           # UVC environment type with parameters
+    vif_type: "istream_if#(64)"            # Virtual interface type
+    sequencer_type: "istream_sequencer#(64)" # Sequencer type
+    sequences:
+      write: "istream_directed_write_sequence#(64)"
+      burst_write: "istream_directed_random_burst_write_sequence#(64)"
+    sequencer_name: "seqr_input"           # Name in virtual sequencer
+    config_db_name: "input_vif"            # uvm_config_db key
+    default_file: "./input_data.txt"       # Default data file
+    default_size: 16                        # Default transaction size
+
+  # Example: Output stream interface
+  m_output_env:
+    env_type: "ostream_env#(64)"
+    vif_type: "ostream_if#(64)"
+    sequencer_type: "ostream_sequencer#(64)"
+    sequences:
+      read: "ostream_random_burst_read_sequence#(64)"
+    sequencer_name: "seqr_output"
+    config_db_name: "output_vif"
+    default_size: 32
+
+  # Example: Dual-port memory interface
+  m_memory_env:
+    env_type: "dpmem_env#(64,9)"
+    vif_type: "dpmem_if#(64,9)"
+    sequencer_type: "dpmem_sequencer#(64,9)"
+    sequences:
+      write: "dpmem_directed_write_sequence#(64,9)"
+      read: "dpmem_directed_read_sequence#(64,9)"
+    sequencer_name: "seqr_memory"
+    config_db_name: "memory_vif"
+    default_file: "./memory_data.txt"
+    default_size: 512
+
+  # Example: Single-port memory interface
+  m_spmem_env:
+    env_type: "spmem_env#(64,4)"
+    vif_type: "spmem_if#(64,4)"
+    sequencer_type: "spmem_sequencer#(64,4)"
+    sequences:
+      write: "spmem_directed_write_sequence#(64,4)"
+      read: "spmem_directed_read_sequence#(64,4)"
+    sequencer_name: "seqr_spmem"
+    config_db_name: "spmem_vif"
+    default_size: 16
+
+  # Example: Register/Configuration interface
+  m_config_env:
+    env_type: "regbank_env"
+    vif_type: "regbank_if"
+    sequencer_type: "computation_sequencer"
+    sequences:
+      configure: "computation_configure_write_seq"
+    sequencer_name: "seqr_config"
+    config_db_name: "config_vif"
+
+# Parameter transformations
+# Maps string values from vplan to integer values used in generated code
+transformations:
+  # Example: Operation mode encoding
+  mode:
+    "00": { value: 0, description: "Mode 0" }
+    "01": { value: 1, description: "Mode 1" }
+    "10": { value: 2, description: "Mode 2" }
+    "11": { value: 3, description: "Mode 3" }
+    default: 0
+
+  # Example: Partial sum phase flags
+  ps_phase:
+    "PS_FIRST": { PS_FIRST: 1, PS_MODE: 0, PS_LAST: 0 }
+    "PS_MODE":  { PS_FIRST: 0, PS_MODE: 1, PS_LAST: 0 }
+    "PS_LAST":  { PS_FIRST: 0, PS_MODE: 0, PS_LAST: 1 }
+
+  # Example: Sign encoding
+  sign_8b:
+    "dont_care": 0
+    "00": 0
+    "01": 1
+    "10": 2
+    "11": 3
+
+# UVC package imports (packages to import in the generated package file)
+packages:
+  - "istream_pkg"
+  - "ostream_pkg"
+  - "dpmem_pkg"
+  - "spmem_pkg"
+  - "regbank_pkg"
+  # Add your IP's required packages here

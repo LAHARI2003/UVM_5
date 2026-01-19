@@ -1,0 +1,32 @@
+# UVM Generator Configuration
+# ═══════════════════════════════════════════════════════════════════
+
+# LLM Settings
+llm:
+  provider: "anthropic"  # or "openai"
+  model: "claude-sonnet-4-20250514"  # or "gpt-4-turbo"
+  max_tokens: 8192
+  temperature: 0.1  # Low temperature for consistent code generation
+
+# Output Settings
+output:
+  base_dir: "./output"
+  ip_infra_dir: "ip_infra"
+  tests_dir: "tests"
+  
+# File naming conventions
+naming:
+  env_suffix: "_env.sv"
+  vseqr_suffix: "_virtual_sequencer.sv"
+  interface_suffix: "_if.sv"
+  package_suffix: "_package.sv"
+  test_suffix: "_test.sv"
+  vseq_suffix: "_vseq.sv"
+
+# Default sizes for sequences
+defaults:
+  feature_buffer_size: 16
+  kernel_mem_size: 512
+  psin_size: 32
+  addin_size: 16
+  output_buffer_size: 32

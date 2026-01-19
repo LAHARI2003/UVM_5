@@ -1,0 +1,3 @@
+how to pass the c++ model we need to add one more step which will inspect the model.cpp
+
+so that it will be used in the test case generation.
