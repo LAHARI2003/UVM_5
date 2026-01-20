@@ -1,0 +1,52 @@
+- TC_ID: TC_S2_SF_MODE00_PS_FIRST_K0F0
+  Active_UVCs:
+    - m_register_env          # Updated: was m_computation_env
+    - m_kernel_mem_env
+    - m_feature_buffer_env
+    - m_addin_env
+    - m_output_buffer_env
+  Stimulus_Generation:
+    - regbank_program:
+        mode: "00"
+        sign_8b: "dont_care"
+        ps_phase: "PS_FIRST"
+        register_mapping: |
+          Register bit mapping for new register_uvc:
+          - register[5:0]   = K_DIM
+          - register[6]     = START_COMPUTE
+          - register[7]     = COMPE
+          - register[8]     = PS_FIRST
+          - register[9]     = PS_MODE
+          - register[10]    = PS_LAST
+          - register[12:11] = MODE
+          - register[14:13] = sign_8b
+          - register[15]    = CONT_COMP
+          - register[23:16] = iteration
+    - input_provisioning:
+        kernels:
+          target: kernels
+          pattern_bin: BIN_K_ALL0
+          notes: "Initialize full kernel frame region with all-zero 64b words."
+        feature:
+          target: feature
+          pattern_bin: BIN_F_ALL0
+          notes: "Stream one frame of all-zero 64b feature words."
+        addin:
+          target: addin
+          pattern_bin: BIN_ADDIN_0
+          notes: "Preload ADDIN memory with zeros (not used in PS_FIRST; keeps default consistent)."
+    - trigger_compute:
+        notes: "Start single-frame compute for PS_FIRST via register write."
+        register_value: "Pack START_COMPUTE=1, COMPE=1, PS_FIRST=1, MODE=00 into 32-bit register"
+    - output_read:
+        psout:
+          target: psout
+          notes: "Read full PSOUT frame and scoreboard vs C-model."
+  Observability:
+    - "Scoreboard: PSOUT stream compared against C-model output for this config."
+    - "Collect CP_OUT_PSOUT_RANGE bins opportunistically from observed PSOUT values."
+  Coverage_Intent:
+    - config_bins: [BIN_MODE_00, BIN_PS_FIRST]
+    - config_cross_bins: [BIN_X_M00_FIRST]
+    - data_pattern_bins: [BIN_K_ALL0, BIN_F_ALL0, BIN_ADDIN_0]
+    - pattern_cross_bins: [BIN_X_ALLMOD_K0_F0]

@@ -1,21 +1,25 @@
 # Environment files with secrets
-*.env
-env_config.txt
+.env
 .env.local
 .env.*.local
+*.env
 
-# Python cache
+# Python
 __pycache__/
-*.pyc
-*.pyo
-.pytest_cache/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+ENV/
+.venv/
 
-# IDE/Editor
-.vscode/
+# IDE
 .idea/
+.vscode/
 *.swp
 *.swo
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db

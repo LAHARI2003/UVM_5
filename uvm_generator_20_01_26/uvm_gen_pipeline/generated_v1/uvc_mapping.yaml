@@ -1,0 +1,63 @@
+block_name: dimc_tile_wrapper_m
+uvcs:
+  m_addin_env:
+    kind: spmem_env#(64,4)
+    model_arg: 'arg : addin'
+    params:
+      ADDR_WIDTH: 4
+      DATA_WIDTH: 64
+    sequence_types:
+    - spmem_directed_write_sequence
+    - spmem_directed_read_sequence
+    sequencer_type: spmem_sequencer
+    type: spmem_uvc
+  m_computation_env:
+    kind: regbank_env
+    model_arg: 'arg : mode, sign_8b'
+    params: {}
+    sequence_types:
+    - register_configure_write_seq
+    - register_write_sequence
+    sequencer_type: regbank_sequencer
+    type: regbank_uvc
+  m_feature_buffer_env:
+    kind: istream_env#(64)
+    model_arg: 'arg : feature'
+    params:
+      DATA_WIDTH: 64
+    sequence_types:
+    - istream_directed_write_sequence
+    - istream_directed_random_burst_write_sequence
+    sequencer_type: istream_sequencer
+    type: istream_uvc
+  m_kernel_mem_env:
+    kind: dpmem_env#(64,9)
+    model_arg: 'arg : kernels'
+    params:
+      ADDR_WIDTH: 9
+      DATA_WIDTH: 64
+    sequence_types:
+    - dpmem_directed_write_sequence
+    - dpmem_directed_read_sequence
+    sequencer_type: dpmem_sequencer
+    type: dpmem_uvc
+  m_output_buffer_env:
+    kind: ostream_env#(64)
+    model_arg: 'arg : psout'
+    params:
+      DATA_WIDTH: 64
+    sequence_types:
+    - ostream_random_burst_read_sequence
+    - ostream_directed_read_sequence
+    sequencer_type: ostream_sequencer
+    type: ostream_uvc
+  m_psin_env:
+    kind: istream_env#(32)
+    model_arg: 'arg : psin'
+    params:
+      DATA_WIDTH: 32
+    sequence_types:
+    - istream_directed_write_sequence
+    - istream_directed_random_burst_write_sequence
+    sequencer_type: istream_sequencer
+    type: istream_uvc

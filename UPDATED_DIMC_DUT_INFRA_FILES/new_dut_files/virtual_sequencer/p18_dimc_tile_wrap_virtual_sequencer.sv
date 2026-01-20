@@ -1,0 +1,33 @@
+// p18_dimc_tile_wrap_virtual_sequencer having pointers to feature_buffer_sequencer, 
+// kernel_mem_sequencer, output_buffer_sequencer, psin_sequencer, addin_sequencer, 
+// register_sequencer (replaces computation_sequencer)
+class p18_dimc_tile_wrap_virtual_sequencer extends uvm_sequencer;
+	
+	`uvm_component_utils(p18_dimc_tile_wrap_virtual_sequencer)
+
+        istream_sequencer#(64)         seqr_feature_buffer;
+        dpmem_sequencer#(64,9)           seqr_kernel_mem;
+        ostream_sequencer#(64)        seqr_output_buffer;
+        
+        istream_sequencer#(32)         seqr_psin;
+        spmem_sequencer#(64,4)         seqr_addin;
+        // New register_sequencer replaces computation_sequencer
+        register_sequencer             seqr_register;
+
+         // Virtual interface
+         virtual dimc_tilewrap_if vif;
+
+	function new(string name, uvm_component parent);
+		super.new(name, parent);
+	endfunction
+	
+		function void build_phase(uvm_phase phase);
+		super.build_phase(phase);
+		
+		// Get virtual interface from config_db
+                  if (!uvm_config_db#(virtual dimc_tilewrap_if )::get(this, "", "dimc_tilewrap_vif", vif))
+                     `uvm_fatal("NOVIF", "Virtual interface must be set for feature_buffer_agent")
+
+		endfunction
+
+endclass
