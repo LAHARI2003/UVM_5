@@ -1,4 +1,4 @@
-// DIMC TILE WRAPPER M package file importing all files
+// DIMC TILE WRAPPER M package file importing all files and UVC packages
 package dimc_tile_wrapper_pkg;
     import uvm_pkg::*;
     import istream_pkg::*;
@@ -11,15 +11,16 @@ package dimc_tile_wrapper_pkg;
     // Interface definition
     `include "dimc_tile_wrapper_if.sv"
 
-    // Environment and infrastructure
+    // Virtual sequencer
     `include "dimc_tile_wrapper_virtual_sequencer.sv"
+
+    // Scoreboard
     `include "dimc_tile_wrapper_scoreboard.sv"
+
+    // Environment
     `include "dimc_tile_wrapper_env.sv"
 
-    // Virtual sequences
-    `include "TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq.sv"
-
-    // Tests
+    // Test
     `include "TC_S2_SF_MODE00_PS_FIRST_K0F0_test.sv"
 
 endpackage

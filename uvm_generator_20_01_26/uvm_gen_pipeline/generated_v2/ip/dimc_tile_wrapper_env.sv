@@ -1,8 +1,8 @@
 // dimc_tile_wrapper_env.sv
 //
-// Top-level UVM environment for dimc_tile_wrapper_m.
-// Instantiates all sub-environments, virtual sequencer, and scoreboard.
-// Connects all sequencers, interfaces, and analysis ports as per UVM methodology.
+// Top-level UVM environment for dimc_tile_wrapper_m
+// Instantiates all sub-environments, virtual sequencer, and scoreboard
+// Connects all virtual interfaces, sequencers, and analysis ports
 
 class dimc_tile_wrapper_env extends uvm_env;
 
@@ -19,8 +19,8 @@ class dimc_tile_wrapper_env extends uvm_env;
   spmem_env#(64,4)      m_addin_env;
   virtual spmem_if#(64,4) addin_vif;
 
-  register_env          m_computation_env;
-  virtual register_if   computation_vif;
+  regbank_env           m_computation_env;
+  virtual regbank_if    computation_vif;
 
   ostream_env#(64)      m_output_buffer_env;
   virtual ostream_if#(64) output_buffer_vif;
@@ -45,7 +45,7 @@ class dimc_tile_wrapper_env extends uvm_env;
     m_psin_env           = istream_env#(32)::type_id::create("m_psin_env", this);
     m_kernel_mem_env     = dpmem_env#(64,9)::type_id::create("m_kernel_mem_env", this);
     m_addin_env          = spmem_env#(64,4)::type_id::create("m_addin_env", this);
-    m_computation_env    = register_env::type_id::create("m_computation_env", this);
+    m_computation_env    = regbank_env::type_id::create("m_computation_env", this);
     m_output_buffer_env  = ostream_env#(64)::type_id::create("m_output_buffer_env", this);
 
     // Create virtual sequencer
@@ -67,7 +67,7 @@ class dimc_tile_wrapper_env extends uvm_env;
     if (!uvm_config_db#(virtual spmem_if#(64,4))::get(this, "*", "addin_vif", addin_vif))
       `uvm_fatal("NOVIF", "Virtual interface must be set for addin_vif")
 
-    if (!uvm_config_db#(virtual register_if)::get(this, "*", "computation_vif", computation_vif))
+    if (!uvm_config_db#(virtual regbank_if)::get(this, "*", "computation_vif", computation_vif))
       `uvm_fatal("NOVIF", "Virtual interface must be set for computation_vif")
 
     if (!uvm_config_db#(virtual ostream_if#(64))::get(this, "*", "output_buffer_vif", output_buffer_vif))
@@ -85,7 +85,7 @@ class dimc_tile_wrapper_env extends uvm_env;
     v_seqr.seqr_computation    = m_computation_env.m_agent.m_sequencer;
     v_seqr.seqr_output_buffer  = m_output_buffer_env.m_agent.m_sequencer;
 
-    // Connect virtual interfaces to agents and drivers/monitors
+    // Connect interfaces to agents and drivers
     m_feature_buffer_env.m_agent.vif           = feature_buffer_vif;
     m_feature_buffer_env.m_agent.m_driver.vif  = feature_buffer_vif;
     m_feature_buffer_env.m_agent.m_monitor.vif = feature_buffer_vif;
@@ -109,7 +109,6 @@ class dimc_tile_wrapper_env extends uvm_env;
     m_output_buffer_env.m_agent.vif           = output_buffer_vif;
     m_output_buffer_env.m_agent.m_driver.vif  = output_buffer_vif;
     m_output_buffer_env.m_agent.m_monitor.vif = output_buffer_vif;
-    m_output_buffer_env.m_agent.m_sequencer.vif = output_buffer_vif;
 
     // Connect monitor analysis ports to scoreboard
     m_output_buffer_env.m_agent.m_monitor.ostream_rd_port.connect(scoreboard.imp_ostream_rd_port);

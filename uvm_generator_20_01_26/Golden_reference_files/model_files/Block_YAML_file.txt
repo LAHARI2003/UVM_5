@@ -60,7 +60,7 @@ Map_to_model : arg : addin
  
 Name : m_computation_env 
 
-Kind : regbank_env 
+Kind : register_env 
 
 Map_to_model : arg : mode, sign_8b 
 

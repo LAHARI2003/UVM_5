@@ -163,6 +163,15 @@ class PhaseCPackage:
                 lines.append(str(f))
         
         lines.append("")
+        lines.append("# Generated Virtual Sequences")
+        lines.append(f"+incdir+{output_dir}/virtual_sequences")
+        
+        # Add generated virtual sequence files
+        for f in self.generated_files:
+            if '/virtual_sequences/' in str(f) or '\\virtual_sequences\\' in str(f):
+                lines.append(str(f))
+        
+        lines.append("")
         lines.append("# Generated Test Files")
         lines.append(f"+incdir+{output_dir}/tests")
         
@@ -231,6 +240,7 @@ class PhaseCPackage:
         
         # Group files by type
         ip_files = [f for f in self.generated_files if '/ip/' in str(f) or '\\ip\\' in str(f)]
+        vseq_files = [f for f in self.generated_files if '/virtual_sequences/' in str(f) or '\\virtual_sequences\\' in str(f)]
         test_files = [f for f in self.generated_files if '/tests/' in str(f) or '\\tests\\' in str(f)]
         
         # Add IP files in dependency order
@@ -239,11 +249,12 @@ class PhaseCPackage:
                 if f.name.endswith(pattern.replace('.sv', '.sv')):
                     ordered.append(f.name)
         
-        # Add test files
-        for f in test_files:
+        # Add virtual sequence files FIRST (tests depend on vseq classes)
+        for f in vseq_files:
             if '_vseq.sv' in f.name:
                 ordered.append(f.name)
         
+        # Add test files AFTER vseq files
         for f in test_files:
             if '_test.sv' in f.name:
                 ordered.append(f.name)

@@ -1,20 +1,12 @@
-// TC_S2_SF_MODE00_PS_FIRST_K0F0_test.sv
-//
-// UVM test for TC_S2_SF_MODE00_PS_FIRST_K0F0
-// Environment: dimc_tile_wrapper_env
-// Virtual sequence: TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq
-
 class TC_S2_SF_MODE00_PS_FIRST_K0F0_test extends uvm_test;
 
   `uvm_component_utils(TC_S2_SF_MODE00_PS_FIRST_K0F0_test)
 
-  // Environment instance
   dimc_tile_wrapper_env env;
-  // Virtual sequence instance
   TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq vseq;
 
   // Virtual interface
-  virtual dimc_tile_wrapper_if vif;
+  virtual dimc_tilewrap_if vif;
 
   function new(string name, uvm_component parent);
     super.new(name, parent);
@@ -22,34 +14,32 @@ class TC_S2_SF_MODE00_PS_FIRST_K0F0_test extends uvm_test;
 
   function void build_phase(uvm_phase phase);
     super.build_phase(phase);
-
-    // Create environment
     env = dimc_tile_wrapper_env::type_id::create("env", this);
 
-    // Create virtual sequence
+    // Create and start the virtual sequence
     vseq = TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq::type_id::create("vseq", this);
 
     // Get virtual interface from config_db
-    if (!uvm_config_db#(virtual dimc_tile_wrapper_if)::get(this, "", "dimc_tile_wrapper_m_vif", vif))
-      `uvm_fatal("NOVIF", "Virtual interface must be set for dimc_tile_wrapper_m")
+    if (!uvm_config_db#(virtual dimc_tilewrap_if)::get(this, "", "dimc_tilewrap_vif", vif))
+      `uvm_fatal("NOVIF", "Virtual interface must be set for dimc_tile_wrapper_env")
   endfunction
 
   function void connect_phase(uvm_phase phase);
     super.connect_phase(phase);
-    // No additional connections required
+    // Connect sequencers if needed
   endfunction
 
   task run_phase(uvm_phase phase);
     phase.raise_objection(this);
 
     // Wait for reset deassertion
-    wait (vif.resetn == 1'b1);
-    repeat (5) @(vif.cb);
+    wait (vif.resetn == 1);
+    repeat(5) @(vif.cb);
 
-    // Start the virtual sequence on the environment's virtual sequencer
+    // Start the virtual sequence
     vseq.start(env.v_seqr);
 
-    repeat (10) @(vif.cb);
+    repeat(10) @(vif.cb);
 
     phase.drop_objection(this);
   endtask

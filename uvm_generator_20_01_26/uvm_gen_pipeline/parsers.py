@@ -259,15 +259,32 @@ def parse_model_cpp(file_path: Path) -> ModelInfo:
     return model_info
 
 
-def generate_uvc_mapping(block_config: BlockConfig) -> Dict[str, Any]:
+def generate_uvc_mapping(block_config: BlockConfig, uvc_library_path: Path = None) -> Dict[str, Any]:
     """
     Generate UVC mapping configuration from block config.
     Maps interfaces to their UVC types and parameters.
+    
+    If uvc_library_path is provided, dynamically scans the UVC library
+    to discover available sequences, parameters, and capabilities.
     """
     mapping = {
         "block_name": block_config.name,
         "uvcs": {}
     }
+    
+    # Alias mapping for legacy/alternative UVC names
+    # Maps legacy names in Block YAML to actual UVC names in the library
+    UVC_ALIASES = {
+        "regbank_uvc": "register_uvc",
+        "regbank_env": "register_env",
+        "computation_uvc": "register_uvc",
+        "computation_env": "register_env",
+    }
+    
+    # Scan UVC library if path is provided
+    uvc_library_info = {}
+    if uvc_library_path and uvc_library_path.exists():
+        uvc_library_info = scan_uvc_library(uvc_library_path)
     
     for interface in block_config.interfaces:
         # Parse the kind to extract base type and parameters
@@ -282,20 +299,307 @@ def generate_uvc_mapping(block_config: BlockConfig) -> Dict[str, Any]:
             # Map to UVC library path
             uvc_type = base_type.replace('_env', '_uvc')
             
+            # Resolve aliases (e.g., regbank_uvc -> register_uvc)
+            resolved_uvc_type = UVC_ALIASES.get(uvc_type, uvc_type)
+            resolved_base_type = UVC_ALIASES.get(base_type, base_type)
+            
+            # Get sequencer type and sequences from library scan or fallback
+            sequencer_type = resolved_base_type.replace('_env', '_sequencer')
+            sequence_types = get_sequence_types(resolved_base_type)
+            interface_type = None
+            package_name = None
+            
+            # Override with dynamically scanned info if available
+            if resolved_uvc_type in uvc_library_info:
+                lib_info = uvc_library_info[resolved_uvc_type]
+                sequencer_type = lib_info.get('sequencer_type', sequencer_type)
+                sequence_types = lib_info.get('sequences', sequence_types)
+                interface_type = lib_info.get('interface_type')
+                package_name = lib_info.get('package_name')
+            
             mapping["uvcs"][interface.name] = {
-                "type": uvc_type,
+                "type": resolved_uvc_type,
                 "kind": kind,
                 "params": interface.params,
                 "model_arg": interface.map_to_model,
-                "sequencer_type": base_type.replace('_env', '_sequencer'),
-                "sequence_types": get_sequence_types(base_type)
+                "sequencer_type": sequencer_type,
+                "sequence_types": sequence_types,
+                "interface_type": interface_type,
+                "package_name": package_name,
+                "param_signature": get_param_signature(resolved_base_type, uvc_library_info.get(resolved_uvc_type, {}))
             }
     
     return mapping
 
 
+def scan_uvc_library(uvc_path: Path) -> Dict[str, Dict]:
+    """
+    Scan UVC library directory to discover available UVCs and their components.
+    
+    This function dynamically parses through all UVCs in the library to extract:
+    - Available sequences and their parameters
+    - Sequencer types and their parameter signatures
+    - Interface types
+    - Package information
+    
+    Returns:
+        Dictionary mapping UVC names to their discovered information
+    """
+    uvc_info = {}
+    
+    if not uvc_path.exists():
+        return uvc_info
+    
+    # Find all UVC directories
+    for uvc_dir in uvc_path.iterdir():
+        if not uvc_dir.is_dir():
+            continue
+        
+        uvc_name = uvc_dir.name  # e.g., "istream_uvc"
+        
+        info = {
+            "path": str(uvc_dir),
+            "sequences": [],
+            "sequencer_type": None,
+            "env_type": None,
+            "interface_type": None,
+            "package_name": None,
+            "parameters": [],
+            "param_defaults": {}
+        }
+        
+        # Parse package file to get all components
+        pkg_dir = uvc_dir / "pkg"
+        if pkg_dir.exists():
+            info.update(_parse_uvc_package(pkg_dir))
+        
+        # Parse env file to get parameter signature
+        env_dir = uvc_dir / "env"
+        if env_dir.exists():
+            info.update(_parse_uvc_env(env_dir))
+        
+        # Parse sequencer file to get sequencer details
+        seqr_dir = uvc_dir / "sequencer"
+        if seqr_dir.exists():
+            info.update(_parse_uvc_sequencer(seqr_dir))
+        
+        # Parse sequences directory to get available sequences
+        seq_dir = uvc_dir / "sequences"
+        if seq_dir.exists():
+            info["sequences"] = _parse_uvc_sequences(seq_dir)
+        
+        # Parse interface file
+        if_dir = uvc_dir / "interface"
+        if if_dir.exists():
+            info.update(_parse_uvc_interface(if_dir))
+        
+        uvc_info[uvc_name] = info
+    
+    return uvc_info
+
+
+def _parse_uvc_package(pkg_dir: Path) -> Dict:
+    """Parse UVC package file to extract package name and included components."""
+    result = {}
+    
+    for pkg_file in pkg_dir.glob("*.sv"):
+        content = pkg_file.read_text()
+        
+        # Extract package name
+        pkg_match = re.search(r'package\s+(\w+)\s*;', content)
+        if pkg_match:
+            result["package_name"] = pkg_match.group(1)
+        
+        # Extract included files to understand component structure
+        includes = re.findall(r'`include\s+"([^"]+)"', content)
+        result["package_includes"] = includes
+        
+    return result
+
+
+def _parse_uvc_env(env_dir: Path) -> Dict:
+    """Parse UVC env file to extract environment class and parameters."""
+    result = {}
+    
+    for env_file in env_dir.glob("*.sv"):
+        content = env_file.read_text()
+        
+        # Extract class definition with parameters
+        # e.g., "class istream_env #(int DATA_WIDTH = 32) extends uvm_env"
+        class_match = re.search(
+            r'class\s+(\w+)\s*(?:#\s*\(\s*([^)]+)\s*\))?\s*extends\s+(\w+)',
+            content
+        )
+        if class_match:
+            result["env_type"] = class_match.group(1)
+            params_str = class_match.group(2)
+            result["base_class"] = class_match.group(3)
+            
+            if params_str:
+                result["parameters"], result["param_defaults"] = _parse_param_list(params_str)
+    
+    return result
+
+
+def _parse_uvc_sequencer(seqr_dir: Path) -> Dict:
+    """Parse UVC sequencer file to extract sequencer type and parameters."""
+    result = {}
+    
+    for seqr_file in seqr_dir.glob("*.sv"):
+        content = seqr_file.read_text()
+        
+        # Extract class definition with parameters
+        class_match = re.search(
+            r'class\s+(\w+)\s*(?:#\s*\(\s*([^)]+)\s*\))?\s*extends\s+(\w+)',
+            content
+        )
+        if class_match:
+            result["sequencer_type"] = class_match.group(1)
+            params_str = class_match.group(2)
+            
+            if params_str and "parameters" not in result:
+                result["parameters"], result["param_defaults"] = _parse_param_list(params_str)
+    
+    return result
+
+
+def _parse_uvc_sequences(seq_dir: Path) -> List[Dict]:
+    """Parse UVC sequences directory to extract all available sequences."""
+    sequences = []
+    
+    for seq_file in seq_dir.glob("*.sv"):
+        content = seq_file.read_text()
+        
+        # Extract sequence class definitions
+        # e.g., "class istream_directed_write_sequence #(int DATA_WIDTH = 32) extends uvm_sequence"
+        class_matches = re.finditer(
+            r'class\s+(\w+)\s*(?:#\s*\(\s*([^)]+)\s*\))?\s*extends\s+(uvm_sequence|uvm_sequence\s*#\([^)]+\))',
+            content
+        )
+        
+        for match in class_matches:
+            seq_name = match.group(1)
+            params_str = match.group(2)
+            
+            seq_info = {
+                "name": seq_name,
+                "file": seq_file.name,
+                "parameters": [],
+                "param_defaults": {},
+                "operation_type": _infer_operation_type(seq_name)
+            }
+            
+            if params_str:
+                seq_info["parameters"], seq_info["param_defaults"] = _parse_param_list(params_str)
+            
+            # Try to extract additional properties from the sequence
+            seq_info.update(_analyze_sequence_body(content, seq_name))
+            
+            sequences.append(seq_info)
+    
+    return sequences
+
+
+def _parse_uvc_interface(if_dir: Path) -> Dict:
+    """Parse UVC interface file to extract interface type and signals."""
+    result = {}
+    
+    for if_file in if_dir.glob("*.sv"):
+        content = if_file.read_text()
+        
+        # Extract interface definition with parameters
+        if_match = re.search(
+            r'interface\s+(\w+)\s*(?:#\s*\(\s*([^)]+)\s*\))?',
+            content
+        )
+        if if_match:
+            result["interface_type"] = if_match.group(1)
+    
+    return result
+
+
+def _parse_param_list(params_str: str) -> tuple:
+    """Parse parameter list string and extract parameter names and defaults."""
+    parameters = []
+    param_defaults = {}
+    
+    # Split by comma, handling nested parentheses
+    params = re.findall(r'(?:int|parameter\s+int|parameter)\s+(\w+)\s*(?:=\s*(\d+))?', params_str)
+    
+    for param_name, default_val in params:
+        parameters.append(param_name)
+        if default_val:
+            param_defaults[param_name] = int(default_val)
+    
+    return parameters, param_defaults
+
+
+def _infer_operation_type(seq_name: str) -> str:
+    """Infer the operation type from sequence name."""
+    name_lower = seq_name.lower()
+    
+    if 'write' in name_lower:
+        if 'read' in name_lower:
+            return 'read_write'
+        return 'write'
+    elif 'read' in name_lower:
+        return 'read'
+    elif 'configure' in name_lower:
+        return 'configure'
+    elif 'random' in name_lower:
+        return 'random'
+    elif 'burst' in name_lower:
+        return 'burst'
+    else:
+        return 'generic'
+
+
+def _analyze_sequence_body(content: str, seq_name: str) -> Dict:
+    """Analyze sequence body to extract additional properties."""
+    result = {}
+    
+    # Check if sequence reads from file
+    if '$readmemh' in content or '$readmemb' in content:
+        result["uses_file_input"] = True
+        
+        # Try to extract file path variable
+        file_var_match = re.search(r'string\s+(\w*file\w*)', content, re.IGNORECASE)
+        if file_var_match:
+            result["file_path_var"] = file_var_match.group(1)
+    
+    # Check if sequence uses size parameter
+    if re.search(r'int\s+size\s*;', content):
+        result["has_size_param"] = True
+    
+    # Check if it's directed or random
+    if 'randomize' in content:
+        result["is_randomized"] = True
+    else:
+        result["is_randomized"] = False
+    
+    return result
+
+
+def get_param_signature(base_type: str, lib_info: Dict) -> str:
+    """Generate parameter signature string for a UVC type."""
+    params = lib_info.get('parameters', [])
+    defaults = lib_info.get('param_defaults', {})
+    
+    if not params:
+        return ""
+    
+    parts = []
+    for param in params:
+        if param in defaults:
+            parts.append(f"int {param} = {defaults[param]}")
+        else:
+            parts.append(f"int {param}")
+    
+    return f"#({', '.join(parts)})"
+
+
 def get_sequence_types(base_type: str) -> List[str]:
-    """Get available sequence types for a UVC base type."""
+    """Get available sequence types for a UVC base type (fallback for when library scan is not available)."""
     sequence_map = {
         "istream_env": [
             "istream_directed_write_sequence",

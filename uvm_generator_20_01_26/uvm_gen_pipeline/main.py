@@ -58,10 +58,12 @@ def print_summary(config: Config, generated_files: list):
     
     ip_files = [f for f in generated_files if '/ip/' in str(f) or '\\ip\\' in str(f)]
     test_files = [f for f in generated_files if '/tests/' in str(f) or '\\tests\\' in str(f)]
-    other_files = [f for f in generated_files if f not in ip_files and f not in test_files]
+    vseq_files = [f for f in generated_files if '/virtual_sequences/' in str(f) or '\\virtual_sequences\\' in str(f)]
+    other_files = [f for f in generated_files if f not in ip_files and f not in test_files and f not in vseq_files]
     
     table.add_row("IP Infrastructure Files", str(len(ip_files)))
-    table.add_row("Test Case Files", str(len(test_files)))
+    table.add_row("Test Files (_test.sv)", str(len(test_files)))
+    table.add_row("Virtual Sequences (_vseq.sv)", str(len(vseq_files)))
     table.add_row("Integration Files", str(len(other_files)))
     table.add_row("Total Files", str(len(generated_files)))
     
@@ -113,13 +115,15 @@ class UVMGeneratorPipeline:
         self.all_generated_files.extend(ip_files)
         
         # Phase B: Test Case Generation
+        # Pass infrastructure files from Phase A as context for better test generation
         test_files = run_phase_b(
             self.config,
             self.llm,
             block_config,
             test_cases,
             uvc_mapping,
-            model_info
+            model_info,
+            infra_files=ip_files  # Pass Phase A files as context
         )
         self.all_generated_files.extend(test_files)
         
@@ -161,7 +165,7 @@ class UVMGeneratorPipeline:
 @click.option(
     '--model', '-m',
     type=click.Path(exists=False),
-    default='model.cpp',
+    default='psout_ac_fixed_14_11_25.cpp',
     help='Path to C++ reference model'
 )
 @click.option(

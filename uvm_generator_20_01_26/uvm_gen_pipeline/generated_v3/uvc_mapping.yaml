@@ -58,7 +58,7 @@ uvcs:
     type: spmem_uvc
   m_computation_env:
     interface_type: register_if
-    kind: register_env
+    kind: regbank_env
     model_arg: 'arg : mode, sign_8b'
     package_name: register_pkg
     param_signature: ''

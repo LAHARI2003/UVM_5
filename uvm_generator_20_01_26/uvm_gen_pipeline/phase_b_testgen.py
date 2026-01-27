@@ -17,6 +17,7 @@ from prompts import (
     TEST_FILE_PROMPT,
     VIRTUAL_SEQUENCE_PROMPT,
     build_context,
+    build_infra_context,
     format_prompt
 )
 
@@ -33,7 +34,8 @@ class PhaseBTestGeneration:
         block_config: Dict,
         test_cases: List[TestCase],
         uvc_mapping: Dict,
-        model_info: Dict
+        model_info: Dict,
+        infra_files: List[Path] = None
     ):
         self.config = config
         self.llm = llm
@@ -41,6 +43,7 @@ class PhaseBTestGeneration:
         self.test_cases = test_cases
         self.uvc_mapping = uvc_mapping
         self.model_info = model_info
+        self.infra_files = infra_files or []  # Infrastructure files from Phase A
         self.generated_files: List[Path] = []
         
         # Derive names
@@ -64,12 +67,26 @@ class PhaseBTestGeneration:
         """
         console.print(Panel("[bold cyan]Phase B: Test Case Generation[/bold cyan]"))
         
-        output_dir = self.config.pipeline.output_dir / "tests"
-        output_dir.mkdir(parents=True, exist_ok=True)
+        # Create separate directories for tests and virtual sequences
+        tests_dir = self.config.pipeline.output_dir / "tests"
+        vseq_dir = self.config.pipeline.output_dir / "virtual_sequences"
+        tests_dir.mkdir(parents=True, exist_ok=True)
+        vseq_dir.mkdir(parents=True, exist_ok=True)
         
         # Load example files
         examples = self._load_example_files()
-        context = build_context(self.block_config, self.uvc_mapping, self.model_info)
+        
+        # Build base context from block config and UVC mapping
+        base_context = build_context(self.block_config, self.uvc_mapping, self.model_info)
+        
+        # Build infrastructure context from Phase A generated files
+        infra_context = build_infra_context(self.infra_files)
+        
+        # Combine contexts for richer LLM understanding
+        context = base_context
+        if infra_context:
+            context = f"{base_context}\n\n{infra_context}"
+            console.print(f"  [dim]Using {len(self.infra_files)} infrastructure files as context[/dim]")
         
         # Generate for each test case
         with Progress(
@@ -85,15 +102,25 @@ class PhaseBTestGeneration:
             for i, test_case in enumerate(self.test_cases, 1):
                 progress.update(task, description=f"[{i}/{len(self.test_cases)}] {test_case.tc_id}")
                 
-                # B.1 Generate test file
-                self._generate_test_file(output_dir, test_case, context, examples.get('test'))
+                # B.1 Generate virtual sequence FIRST (vseq defines what the test will do)
+                # Save to virtual_sequences directory
+                vseq_path = self._generate_virtual_sequence(vseq_dir, test_case, context, examples.get('vseq'))
                 
-                # B.2 Generate virtual sequence
-                self._generate_virtual_sequence(output_dir, test_case, context, examples.get('vseq'))
+                # B.2 Generate test file AFTER (test instantiates the vseq)
+                # Include the just-generated vseq as additional context for the test
+                # Save to tests directory
+                test_context = context
+                if vseq_path and vseq_path.exists():
+                    vseq_content = vseq_path.read_text()
+                    test_context = f"{context}\n\n=== Generated Virtual Sequence for This Test ===\n{vseq_content}"
+                
+                self._generate_test_file(tests_dir, test_case, test_context, examples.get('test'))
                 
                 progress.advance(task)
         
-        console.print(f"[green]Phase B complete - Generated {len(self.generated_files)} files[/green]\n")
+        console.print(f"[green]Phase B complete - Generated {len(self.generated_files)} files[/green]")
+        console.print(f"  [dim]Tests: {tests_dir}[/dim]")
+        console.print(f"  [dim]Virtual Sequences: {vseq_dir}[/dim]\n")
         
         return self.generated_files
     
@@ -152,8 +179,12 @@ class PhaseBTestGeneration:
         test_case: TestCase,
         context: str,
         example: Optional[str]
-    ):
-        """Generate the virtual sequence for a test case."""
+    ) -> Path:
+        """Generate the virtual sequence for a test case.
+        
+        Returns:
+            Path to the generated vseq file
+        """
         tc_id = test_case.tc_id
         output_filename = f"{tc_id}_vseq.sv"
         
@@ -186,6 +217,8 @@ class PhaseBTestGeneration:
         output_path = output_dir / output_filename
         output_path.write_text(code)
         self.generated_files.append(output_path)
+        
+        return output_path
     
     def _build_test_config(self, test_case: TestCase) -> str:
         """Build test configuration string from test case."""
@@ -296,8 +329,24 @@ def run_phase_b(
     block_config: Dict,
     test_cases: List[TestCase],
     uvc_mapping: Dict,
-    model_info: Dict
+    model_info: Dict,
+    infra_files: List[Path] = None
 ) -> List[Path]:
-    """Convenience function to run Phase B."""
-    phase = PhaseBTestGeneration(config, llm, block_config, test_cases, uvc_mapping, model_info)
+    """Convenience function to run Phase B.
+    
+    Args:
+        config: Pipeline configuration
+        llm: LLM client for code generation
+        block_config: Block configuration dictionary
+        test_cases: List of test cases from Vplan
+        uvc_mapping: UVC mapping dictionary
+        model_info: Model information dictionary
+        infra_files: List of infrastructure files from Phase A (env, vseqr, interface, etc.)
+    
+    Returns:
+        List of generated file paths
+    """
+    phase = PhaseBTestGeneration(
+        config, llm, block_config, test_cases, uvc_mapping, model_info, infra_files
+    )
     return phase.run()

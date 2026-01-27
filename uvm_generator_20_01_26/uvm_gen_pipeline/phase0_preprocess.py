@@ -123,11 +123,29 @@ class Phase0Preprocessor:
             console.print(f"    - Parameters: {self.model_info.parameters}")
     
     def _generate_uvc_mapping(self):
-        """Generate UVC mapping from block configuration."""
+        """Generate UVC mapping from block configuration.
+        
+        This method now dynamically scans the UVC library to discover:
+        - Available sequences and their parameters
+        - Sequencer types and interface types
+        - Package information for imports
+        """
         console.print("  [0.4] Generating UVC Mapping...", end=" ")
         
-        self.uvc_mapping = generate_uvc_mapping(self.block_config)
-        console.print(f"[green]OK[/green] ({len(self.uvc_mapping.get('uvcs', {}))} UVCs)")
+        # Use UVC library path for dynamic scanning
+        uvc_library_path = self.config.pipeline.uvc_library_path
+        
+        self.uvc_mapping = generate_uvc_mapping(self.block_config, uvc_library_path)
+        
+        # Log additional info if verbose
+        num_uvcs = len(self.uvc_mapping.get('uvcs', {}))
+        console.print(f"[green]OK[/green] ({num_uvcs} UVCs)")
+        
+        if self.config.pipeline.verbose and uvc_library_path.exists():
+            console.print(f"    - Scanned UVC library: {uvc_library_path}")
+            for uvc_name, uvc_info in self.uvc_mapping.get('uvcs', {}).items():
+                seq_count = len(uvc_info.get('sequence_types', []))
+                console.print(f"    - {uvc_name}: {seq_count} sequences available")
     
     def _save_configs(self):
         """Save intermediate configuration files."""

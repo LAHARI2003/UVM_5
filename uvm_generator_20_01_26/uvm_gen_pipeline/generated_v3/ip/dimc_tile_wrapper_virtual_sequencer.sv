@@ -5,7 +5,7 @@ class dimc_tile_wrapper_virtual_sequencer extends uvm_sequencer;
 
     `uvm_component_utils(dimc_tile_wrapper_virtual_sequencer)
 
-    // Sequencer handles
+    // Handles to lower-level sequencers
     istream_sequencer#(64)      seqr_feature_buffer;
     istream_sequencer#(32)      seqr_psin;
     dpmem_sequencer#(64,9)      seqr_kernel_meenv;
@@ -13,7 +13,7 @@ class dimc_tile_wrapper_virtual_sequencer extends uvm_sequencer;
     register_sequencer          seqr_computation;
     ostream_sequencer#(64)      seqr_output_buffer;
 
-    // Virtual interface handle for DUT
+    // Virtual interface for DUT
     virtual dimc_tile_wrapper_m_if vif;
 
     function new(string name, uvm_component parent);

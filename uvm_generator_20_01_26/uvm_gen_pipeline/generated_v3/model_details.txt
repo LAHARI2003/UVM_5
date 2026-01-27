@@ -1,0 +1,5 @@
+Number of arguments: 10
+Argument names: kernel_file, feature_file, psin_hex32_file, addin_hex32_file, output_file, mode, sign_8b, PS_FIRST, PS_MODE, PS_LAST
+Input files: 
+Output files: 
+Parameters: mode, sign_8b, PS_FIRST, PS_MODE, PS_LAST

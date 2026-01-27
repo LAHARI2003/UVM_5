@@ -4,22 +4,22 @@ package dimc_tile_wrapper_pkg;
     import istream_pkg::*;
     import dpmem_pkg::*;
     import spmem_pkg::*;
-    import register_pkg::*;
+    import regbank_pkg::*;
     import ostream_pkg::*;
     `include "uvm_macros.svh"
 
     // Interface definition
     `include "dimc_tile_wrapper_if.sv"
 
-    // Environment and infrastructure
+    // UVM environment components
     `include "dimc_tile_wrapper_virtual_sequencer.sv"
     `include "dimc_tile_wrapper_scoreboard.sv"
     `include "dimc_tile_wrapper_env.sv"
 
-    // Virtual sequences
+    // Virtual sequence(s)
     `include "TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq.sv"
 
-    // Tests
+    // Test(s)
     `include "TC_S2_SF_MODE00_PS_FIRST_K0F0_test.sv"
 
 endpackage

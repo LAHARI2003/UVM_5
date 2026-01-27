@@ -26,10 +26,6 @@ generated\ip\dimc_tile_wrapper_virtual_sequencer.sv
 generated\ip\dimc_tile_wrapper_env.sv
 generated\ip\dimc_tile_wrapper_scoreboard.sv
 
-# Generated Virtual Sequences
-+incdir+generated/virtual_sequences
-generated\virtual_sequences\TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq.sv
-
 # Generated Test Files
 +incdir+generated/tests
 generated\tests\TC_S2_SF_MODE00_PS_FIRST_K0F0_test.sv

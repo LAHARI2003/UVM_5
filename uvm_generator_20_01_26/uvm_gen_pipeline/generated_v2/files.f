@@ -14,8 +14,8 @@ $UVM_HOME/src/uvm_pkg.sv
 ..\uvc/dpmem_uvc/pkg/dpmem_pkg.sv
 +incdir+..\uvc/spmem_uvc
 ..\uvc/spmem_uvc/pkg/spmem_pkg.sv
-+incdir+..\uvc/register_uvc
-..\uvc/register_uvc/pkg/register_pkg.sv
++incdir+..\uvc/regbank_uvc
+..\uvc/regbank_uvc/pkg/regbank_pkg.sv
 +incdir+..\uvc/ostream_uvc
 ..\uvc/ostream_uvc/pkg/ostream_pkg.sv
 
@@ -26,13 +26,10 @@ generated\ip\dimc_tile_wrapper_virtual_sequencer.sv
 generated\ip\dimc_tile_wrapper_env.sv
 generated\ip\dimc_tile_wrapper_scoreboard.sv
 
-# Generated Virtual Sequences
-+incdir+generated/virtual_sequences
-generated\virtual_sequences\TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq.sv
-
 # Generated Test Files
 +incdir+generated/tests
 generated\tests\TC_S2_SF_MODE00_PS_FIRST_K0F0_test.sv
+generated\tests\TC_S2_SF_MODE00_PS_FIRST_K0F0_vseq.sv
 
 # Package and Testbench
 generated/dimc_tile_wrapper_pkg.sv

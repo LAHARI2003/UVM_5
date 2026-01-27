@@ -95,16 +95,21 @@ Test Configuration:
 - Environment class: {env_class}
 - Virtual sequence class: {vseq_class}
 
+IMPORTANT: Use the EXACT class names and interface types from the infrastructure context provided.
+- The environment class name MUST match what's defined in the generated environment file
+- The virtual interface type MUST match the generated interface
+- The virtual sequencer handle (v_seqr) MUST be used to start the virtual sequence
+
 The test should:
 1. Extend uvm_test
-2. Create the environment instance
-3. Create the virtual sequence instance
-4. Get the main virtual interface from config_db
+2. Create the environment instance using the exact environment class name from context
+3. Create the virtual sequence instance  
+4. Get the main virtual interface from config_db (use the exact interface type from context)
 5. In run_phase:
    - Raise objection
    - Wait for reset deassertion
    - Add initial delay cycles
-   - Start the virtual sequence on the environment's virtual sequencer
+   - Start the virtual sequence on the environment's virtual sequencer (env.v_seqr)
    - Add final delay cycles
    - Drop objection
 
@@ -112,6 +117,7 @@ Active UVCs for this test:
 {active_uvcs}
 
 Follow the exact style of the example test file provided.
+Use the exact class names, interface types, and sequencer handles from the infrastructure context.
 Generate the complete file named: {output_filename}
 """
 
@@ -126,9 +132,15 @@ Register Configuration (pack into 32-bit register):
 Stimulus Configuration:
 {stimulus_config}
 
+CRITICAL: Use the EXACT sequencer handle names from the virtual sequencer in the infrastructure context.
+Look at the virtual sequencer class definition to find:
+- The correct p_sequencer type to use with `uvm_declare_p_sequencer`
+- The exact names of sequencer handles (e.g., seqr_feature_buffer, seqr_kernel_mem, seqr_register, etc.)
+- The virtual interface signals available (e.g., vif.dimc_tilewrap_clk, vif.psout_buff_full)
+
 The virtual sequence should:
 1. Extend uvm_sequence
-2. Use `uvm_declare_p_sequencer` with the virtual sequencer type
+2. Use `uvm_declare_p_sequencer` with the EXACT virtual sequencer type from context
 3. Declare all needed sub-sequences based on active UVCs
 4. Include parameters: mode, sign_8b, PS_FIRST, PS_MODE, PS_LAST, etc.
 5. Implement pack_register() helper function with the register bit mapping
@@ -136,16 +148,19 @@ The virtual sequence should:
    a. Set parameter values for this specific test case
    b. Call Python scripts to generate test data (use $system)
    c. Run C model to generate expected output (use $system)
-   d. Configure capture signals on virtual interface
-   e. Run initialization register sequence
-   f. Run input data sequences (feature, kernel, psin, addin as needed)
+   d. Configure capture signals on virtual interface (use p_sequencer.vif.*)
+   e. Run initialization register sequence on p_sequencer.seqr_register
+   f. Run input data sequences on correct sequencer handles from p_sequencer
    g. Run start compute register sequence
-   h. Wait for completion (poll status signals)
-   i. Run output read sequence
+   h. Wait for completion (poll status signals via p_sequencer.vif)
+   i. Run output read sequence on correct output sequencer handle
    j. Cleanup temporary files
 
 Sequences to use:
 {sequence_list}
+
+IMPORTANT: Match the sequencer handle names EXACTLY as defined in the virtual sequencer class.
+For example, if virtual sequencer has "seqr_register", use "p_sequencer.seqr_register".
 
 Follow the exact style of the example virtual sequence provided.
 Generate the complete file named: {output_filename}
@@ -224,5 +239,90 @@ def build_context(
         context_parts.append(f"Input files: {model_info.get('input_files', [])}")
         context_parts.append(f"Output files: {model_info.get('output_files', [])}")
         context_parts.append(f"Parameters: {model_info.get('parameters', [])}")
+    
+    return '\n'.join(context_parts)
+
+
+def build_infra_context(infra_files: list) -> str:
+    """Build context string from Phase A infrastructure files.
+    
+    This function reads the generated infrastructure files (environment, virtual sequencer,
+    interface, scoreboard) and formats them as context for the LLM to use when generating
+    test cases. This ensures test files reference the correct class names, sequencer handles,
+    and interface signals.
+    
+    Args:
+        infra_files: List of Path objects pointing to generated infrastructure files
+        
+    Returns:
+        Formatted context string containing infrastructure code
+    """
+    from pathlib import Path
+    
+    if not infra_files:
+        return ""
+    
+    context_parts = []
+    context_parts.append("=== Generated IP Infrastructure (Phase A) ===")
+    context_parts.append("Use these exact class names, sequencer handles, and interface signals in the test and vseq files.\n")
+    
+    # Categorize files for structured context
+    env_files = []
+    vseqr_files = []
+    interface_files = []
+    scoreboard_files = []
+    other_files = []
+    
+    for file_path in infra_files:
+        if not isinstance(file_path, Path):
+            file_path = Path(file_path)
+        
+        if not file_path.exists():
+            continue
+            
+        name_lower = file_path.name.lower()
+        if 'env' in name_lower:
+            env_files.append(file_path)
+        elif 'virtual_sequencer' in name_lower or 'vseqr' in name_lower:
+            vseqr_files.append(file_path)
+        elif 'interface' in name_lower or '_if' in name_lower:
+            interface_files.append(file_path)
+        elif 'scoreboard' in name_lower:
+            scoreboard_files.append(file_path)
+        else:
+            other_files.append(file_path)
+    
+    # Add virtual sequencer first (most important for test/vseq generation)
+    for file_path in vseqr_files:
+        content = file_path.read_text()
+        context_parts.append(f"\n--- Virtual Sequencer ({file_path.name}) ---")
+        context_parts.append("IMPORTANT: Use these exact sequencer handle names in the vseq body() task:")
+        context_parts.append(content)
+    
+    # Add environment (shows how sub-environments are instantiated)
+    for file_path in env_files:
+        content = file_path.read_text()
+        context_parts.append(f"\n--- Environment ({file_path.name}) ---")
+        context_parts.append("IMPORTANT: Use this exact environment class name in the test file:")
+        context_parts.append(content)
+    
+    # Add interface (shows available signals)
+    for file_path in interface_files:
+        content = file_path.read_text()
+        context_parts.append(f"\n--- Interface ({file_path.name}) ---")
+        context_parts.append("Available signals for the virtual interface:")
+        context_parts.append(content)
+    
+    # Add scoreboard if present
+    for file_path in scoreboard_files:
+        content = file_path.read_text()
+        context_parts.append(f"\n--- Scoreboard ({file_path.name}) ---")
+        context_parts.append(content)
+    
+    # Add any other infrastructure files
+    for file_path in other_files:
+        content = file_path.read_text()
+        context_parts.append(f"\n--- {file_path.name} ---")
+        context_parts.append(content)
     
     return '\n'.join(context_parts)
